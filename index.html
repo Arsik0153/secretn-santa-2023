@@ -16,15 +16,113 @@
     </head>
     <body>
         <div class="box">
-            <h1>С наступающим новым годом!</h1>
-            <p>
-                Ты даришь человеку с иконкой:
-                <img src="images/people/Adilzhan.svg" alt="123" />
-            </p>
-            <p>
-                А чтобы найти имя этого человека, <br />
-                зайди в фотографию чата :)
-            </p>
+            <form id="form" class="part">
+                <textarea id="input" class="input" autofocus></textarea>
+                <button type="submit" class="generate">Generate your pairings</button>
+                <div id="result" class="result none"></div>
+            </form>
         </div>
+        <div class="box" id="results">
+
+        </div>
+        <script src="vendors/Lodash-3.10.1.js"></script>
+        <script src="vendors/Cryptojs.aes-3.1.2.js"></script>
+        <script>
+
+            var key = String( _.random( 0x0000, 0xFFFF ) );
+            var encryptedPairing = CryptoJS.AES.encrypt( JSON.stringify({"Azat": {"name": "Adzha", "icon":"https://asdasda"}}), key );
+            console.log(JSON.parse(CryptoJS.AES.decrypt(encryptedPairing, key).toString(CryptoJS.enc.Utf8)));
+
+
+            // move to another file
+
+            document.getElementById( 'form' ).addEventListener( 'submit', generate );
+
+            function generate( e ) {
+
+                e.preventDefault();
+                var content = document.getElementById( 'input' ).value;
+
+                // Convert carriage returns into line feeds
+                content = content.replace( /(\r\n|\r)/g, '\n' );
+
+                // Merge adjacent blank characters into a single space
+                content = content.replace( /[ \t]+/g, ' ' );
+
+                // Trim lines
+                content = content.replace( /^ | $/gm, '' );
+
+                // Strip comments
+                content = content.replace( /^#.*$/gm, '' );
+
+                // Strip empty lines
+                content = content.replace( /\n+/g, '\n' );
+
+                // Remove leading/trailing newlines
+                content = content.replace( /^\n|\n$/g, '' );
+
+                var lines = content.split( /\n/g );
+                // console.log(lines);
+
+                // if ( lines.length === 0 || lines.length === 1 && lines[ 0 ].length === 0 )
+                //     return reset();
+
+                const persons = [];
+                lines.forEach(line => {
+                    const p = line.split(' ');
+                    persons.push({ name: p[0], icon: p[1]});
+                })
+                // console.log(persons);
+                // Create pairings
+                document.persons = persons;
+                const pairings = createPairings(persons);
+                console.log("pairings:")
+                console.log(pairings)
+
+                render(pairings);
+            }
+
+            function createPairings(persons) {
+                const pairings = [];
+                const paired = [];
+
+                persons.forEach(person => {
+                    const other = _.sample(_.difference(_.difference(persons, [person]), paired))
+                    paired.push(other);
+                    pairings.push({name: person.name, pair: other});
+                })
+                return pairings;
+            }
+
+            /**
+             *
+             * @param pairings
+             *
+             * pairing:
+             * nameStr: String -> {name: String, icon: String}
+             */
+            function render(pairings) {
+                const results = document.getElementById("results");
+                pairings.forEach(pairing => {
+                    const personName = document.createElement('p');
+                    const pairingLink = document.createElement('a');
+                    personName.innerText = pairing.name
+                    pairingLink.href = pairingPage(pairing)
+                    pairingLink.innerText = "click me"
+
+                    results.appendChild(personName);
+                    results.appendChild(pairingLink);
+                })
+            }
+
+            function pairingPage(pairing) {
+                const pairingPath = window.location.pathname.replace( /[^/]+$/, '' ) + 'pairing.html';
+                const key = String( _.random( 0x0000, 0xFFFF ) );
+                console.log(pairing.pair)
+                const encryptedPairing = CryptoJS.AES.encrypt( JSON.stringify(pairing.pair), key );
+                const pairingQueryString = '?name=' + encodeURIComponent(pairing.name) + '&key=' + encodeURIComponent(key) + '&pairing=' + encodeURIComponent(encryptedPairing);
+                return window.location.protocol + '//' + window.location.host + pairingPath + pairingQueryString;
+            }
+        </script>
     </body>
 </html>
